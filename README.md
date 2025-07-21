@@ -57,7 +57,8 @@ This command will open the application in your web browser.
 The logic for classifying and clustering variables is based on a **hybrid approach** combining rule-based categorization and K-Means clustering.
 
 ### Diagram:
-![Classification and Clustering Logic](Variablen_Klassifizierung _ Mermaid Chart-2025-07-17-090649.jpg)
+
+<img width="3840" height="2986" alt="image" src="https://github.com/user-attachments/assets/2735f970-396e-4ec3-9380-d8df86c48a1d" />
 
 ---
 
