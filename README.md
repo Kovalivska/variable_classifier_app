@@ -3,7 +3,7 @@
 
 This repository contains a **Streamlit application** for classifying variables based on their properties, generating reports, and visualizations.
 
-## 🚀 Features
+## Features
 
 - **Robust Data Loading**: Supports loading CSV and Excel files with automatic delimiter and header detection.
 - **Statistical Feature Calculation**: Computes key statistical metrics for each numerical variable.
@@ -15,7 +15,7 @@ This repository contains a **Streamlit application** for classifying variables b
 
 ---
 
-## ⚙️ Setup
+##  Setup
 
 To run this application locally, follow these steps:
 
@@ -42,7 +42,7 @@ pip install -r requirements.txt
 
 ---
 
-## ▶️ Running the Streamlit Application
+##  Running the Streamlit Application
 
 ```bash
 streamlit run app6.py
@@ -52,7 +52,7 @@ This command will open the application in your web browser.
 
 ---
 
-## 🧠 Classification and Clustering Logic
+## Classification and Clustering Logic
 
 The logic for classifying and clustering variables is based on a **hybrid approach** combining rule-based categorization and K-Means clustering.
 
@@ -61,7 +61,7 @@ The logic for classifying and clustering variables is based on a **hybrid approa
 
 ---
 
-## 📋 Usage
+## Usage
 
 1. **Upload Data**: Use "Step 1: Upload Data" to upload your CSV or Excel file.
 2. **Start Analysis**: Click "Start Analysis" in "Step 2: Perform Analysis and Classification". This will calculate features, classify variables, and perform clustering.
@@ -70,7 +70,7 @@ The logic for classifying and clustering variables is based on a **hybrid approa
 
 ---
 
-## 🗂️ Project Structure
+##  Project Structure
 ```
 variable_classifier_app/
 ├── output/
