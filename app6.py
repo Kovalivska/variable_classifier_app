@@ -77,11 +77,11 @@ def load_data_robustly(uploaded_file):
         try:
             # Read as bytes and then use io.BytesIO
             xls = pd.read_excel(io.BytesIO(uploaded_file.getvalue()), sheet_name=None, decimal=",")
-            st.info(f"🗂️ Available Sheets: {list(xls.keys())}")
+            st.info(f" Available Sheets: {list(xls.keys())}")
             df = next(iter(xls.values()))
-            st.success("✅ Excel data successfully loaded.")
+            st.success(" Excel data successfully loaded.")
         except Exception as e:
-            st.error(f"❌ Error loading Excel file: {str(e)}")
+            st.error(f" Error loading Excel file: {str(e)}")
     else:
         st.info(f"📄 Attempting to load CSV file: {uploaded_file.name}")
         common_delimiters = [',', ';', '\t', '|']
@@ -102,7 +102,7 @@ def load_data_robustly(uploaded_file):
                     # Check for a reasonable number of non-empty columns after dropping all-NaN columns
                     if df_attempt_header0.dropna(axis=1, how='all').shape[1] > 5:
                         df = df_attempt_header0
-                        st.success(f"✅ Successfully loaded with delimiter '{delimiter}' and header=0.")
+                        st.success(f" Successfully loaded with delimiter '{delimiter}' and header=0.")
                         break
             except Exception:
                 pass
@@ -121,17 +121,17 @@ def load_data_robustly(uploaded_file):
                         # Check for a reasonable number of non-empty columns after dropping all-NaN columns
                         if df_attempt_header1.dropna(axis=1, how='all').shape[1] > 5:
                             df = df_attempt_header1
-                            st.success(f"✅ Successfully loaded with delimiter '{delimiter}' and header=1.")
+                            st.success(f" Successfully loaded with delimiter '{delimiter}' and header=1.")
                             break
                 except Exception:
                     pass
 
     if df is None:
-        st.error("❌ Error: File could not be loaded. Please try another file or check its format/encoding.")
+        st.error(" Error: File could not be loaded. Please try another file or check its format/encoding.")
     else:
-        st.write("📊 Dataset successfully loaded.")
-        st.write("🧮 Shape:", df.shape)
-        st.write("🧾 First 5 rows:")
+        st.write(" Dataset successfully loaded.")
+        st.write(" Shape:", df.shape)
+        st.write(" First 5 rows:")
         st.dataframe(df.head())
         
     return df
@@ -572,7 +572,7 @@ def create_batch_diagrams(df_original):
     Creates batch diagrams for numeric variables (Fireplot).
     Directly adapted from the user's script (Matplotlib).
     """
-    st.subheader("🔥 Batch Diagrams: Time Series of Numeric Variables")
+    st.subheader(" Batch Diagrams: Time Series of Numeric Variables")
 
     zeit_spalte = None
     for col in df_original.columns:
@@ -581,7 +581,7 @@ def create_batch_diagrams(df_original):
             break
 
     if zeit_spalte is None:
-        st.error("❌ Time column (e.g., 'time') not found.")
+        st.error(" Time column (e.g., 'time') not found.")
         return
 
     try:
@@ -589,7 +589,7 @@ def create_batch_diagrams(df_original):
         df_original = df_original.dropna(subset=[zeit_spalte])
         df_original = df_original.sort_values(by=zeit_spalte)
     except Exception as e:
-        st.error(f"❌ Error converting time column: {e}")
+        st.error(f" Error converting time column: {e}")
         return
 
     numeric_columns = df_original.select_dtypes(include='number').columns.tolist()
@@ -628,14 +628,14 @@ def create_batch_diagrams(df_original):
         for k in range(len(sub_vars), len(axes)):
             axes[k].axis('off')
 
-        plt.suptitle("🔥 Time Series of Numeric Variables", fontsize=16)
+        plt.suptitle(" Time Series of Numeric Variables", fontsize=16)
         plt.tight_layout(rect=[0, 0, 1, 0.96])
         st.pyplot(fig)
         plt.close(fig) # Close figure to free memory
 
 
 # --- Streamlit App Structure ---
-st.title("Variable Analysis and Classification (Final Version)")
+st.title("Variable Analysis and Classification")
 st.markdown("This application helps you classify variables in your dataset and provide recommendations based on their statistical characteristics and clustering.")
 st.markdown("---")
 
@@ -653,9 +653,9 @@ if uploaded_file is not None:
     st.info("File uploaded. Processing...")
     st.session_state['original_df'] = load_data_robustly(uploaded_file)
     if st.session_state['original_df'] is not None:
-        st.success("✅ Data successfully loaded into session.")
+        st.success(" Data successfully loaded into session.")
     else:
-        st.error("❌ Data could not be loaded. Please check the file.")
+        st.error(" Data could not be loaded. Please check the file.")
 else:
     st.info("Please upload a file to begin.")
 
@@ -727,7 +727,7 @@ if st.session_state['original_df'] is not None:
             else:
                 st.warning("No data for categorization.")
                 st.session_state['ergebnis_df'] = pd.DataFrame(columns=['Name', 'Kategorie', 'Cluster', 'Clustername_final', 'Empfehlung', 'Korrelationspartner', 'Korrelationswert'])
-                st.success("✅ Analysis and classification completed, but no variables processed.")
+                st.success("Analysis and classification completed, but no variables processed.")
                 # No return here, allow the rest of the script to run with empty/default data
 
             # Initialize Clustername_final before correlation/clustering
@@ -797,7 +797,7 @@ if st.session_state['original_df'] is not None:
             # Step 2.6: Advanced Naming and Recommendations (now uses pre-calculated correlations and cluster counts)
             st.session_state['ergebnis_df'] = apply_advanced_naming_and_recommendations(ergebnis_df, cluster_counts_dict)
 
-        st.success("✅ Analysis and classification completed.")
+        st.success(" Analysis and classification completed.")
         st.subheader("Classification Results Table:")
         st.dataframe(st.session_state['ergebnis_df'])
 else:
@@ -945,9 +945,9 @@ if st.session_state.get('original_df') is not None and not st.session_state['ori
                         file_name="data_profile_report.html",
                         mime="text/html"
                     )
-                st.success("✅ Data profile report generated successfully!")
+                st.success(" Data profile report generated successfully!")
             except Exception as e:
-                st.error(f"❌ Error generating data profile report: {e}")
+                st.error(f" Error generating data profile report: {e}")
 else:
     st.info("Please upload data in Step 1 first to generate a data profile report.")
 
