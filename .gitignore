@@ -1,0 +1,8 @@
+__pycache__/
+.streamlit/
+*.html
+*.png
+*.csv
+*.ipynb # Exclude the notebook itself
+venv/
+.env
