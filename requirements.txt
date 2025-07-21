@@ -5,5 +5,4 @@ scikit-learn==1.6.1
 matplotlib
 seaborn
 plotly_express
-ydata_profiling
 openpyxl
