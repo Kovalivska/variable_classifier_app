@@ -11,12 +11,18 @@ from scipy.spatial.distance import cdist
 import csv
 import io
 import os
-import plotly_express as px # Used for Sunburst chart as per original notebook's explicit use
-from ydata_profiling import ProfileReport # Added for data report generation
-import sklearn # Added to correctly get sklearn version
+import plotly_express as px
+# import sweetviz as sv # Removed due to Python 3.13 incompatibility
+import sklearn
+
+# Suppress warnings for a cleaner output
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore", category=FutureWarning)
 
 # --- Configuration (MUST be the first Streamlit command) ---
-st.set_page_config(layout="wide", page_title="Variable Classification App")
+st.set_page_config(layout="wide", page_title="Variable Classification App (Final Version)")
 
 # --- Library Installation and Version Check for Colab Synchronization ---
 # These commands will attempt to install/update the specified libraries.
@@ -43,7 +49,8 @@ try:
         print(f"Library versions do not match Colab. Attempting to install specific versions: "
               f"pandas=={required_pandas}, numpy=={required_numpy}, scikit-learn=={required_sklearn}")
         # Use os.system to execute pip install
-        os.system(f'pip install pandas=={required_pandas} numpy=={required_numpy} scikit-learn=={required_sklearn} plotly_express ydata-profiling openpyxl --upgrade --quiet')
+        # Removed sweetviz from installation command as it's causing issues
+        os.system(f'pip install pandas=={required_pandas} numpy=={required_numpy} scikit-learn=={required_sklearn} plotly_express openpyxl --upgrade --quiet')
         st.experimental_rerun() # Rerun the app after installation
     else:
         # Display success message only after set_page_config has run
@@ -52,17 +59,11 @@ try:
 except ImportError:
     # Print to console/log, as st.warning cannot be called before set_page_config
     print("Required libraries not found. Attempting installation.")
-    os.system('pip install pandas==2.2.3 numpy==1.26.4 scikit-learn==1.6.1 plotly_express ydata-profiling openpyxl --upgrade --quiet')
+    # Removed sweetviz from installation command as it's causing issues
+    os.system('pip install pandas==2.2.3 numpy==1.26.4 scikit-learn==1.6.1 plotly_express openpyxl --upgrade --quiet')
     st.experimental_rerun() # Rerun the app after installation
 
-# Suppress warnings for cleaner output
-import warnings
-warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
-warnings.filterwarnings("ignore", category=DeprecationWarning)
-warnings.filterwarnings("ignore", category=FutureWarning)
-
-
-# --- Helper Functions (Directly adapted from priject2konzept_stromzaehler_1807_updated.py) ---
+# --- Helper Functions ---
 
 def load_data_robustly(uploaded_file):
     """
@@ -73,17 +74,17 @@ def load_data_robustly(uploaded_file):
     file_extension = os.path.splitext(uploaded_file.name)[-1].lower()
 
     if file_extension in ['.xls', '.xlsx', '.xlsm']:
-        st.info(f"📄 Excel file detected: {uploaded_file.name}")
+        st.info(f"Excel file detected: {uploaded_file.name}")
         try:
             # Read as bytes and then use io.BytesIO
             xls = pd.read_excel(io.BytesIO(uploaded_file.getvalue()), sheet_name=None, decimal=",")
-            st.info(f" Available Sheets: {list(xls.keys())}")
+            st.info(f"Available Sheets: {list(xls.keys())}")
             df = next(iter(xls.values()))
-            st.success(" Excel data successfully loaded.")
+            st.success("Excel data successfully loaded.")
         except Exception as e:
-            st.error(f" Error loading Excel file: {str(e)}")
+            st.error(f"Error loading Excel file: {str(e)}")
     else:
-        st.info(f"📄 Attempting to load CSV file: {uploaded_file.name}")
+        st.info(f"Attempting to load CSV file: {uploaded_file.name}")
         common_delimiters = [',', ';', '\t', '|']
         file_content = uploaded_file.getvalue().decode('utf-8') # Decode file content
 
@@ -102,7 +103,7 @@ def load_data_robustly(uploaded_file):
                     # Check for a reasonable number of non-empty columns after dropping all-NaN columns
                     if df_attempt_header0.dropna(axis=1, how='all').shape[1] > 5:
                         df = df_attempt_header0
-                        st.success(f" Successfully loaded with delimiter '{delimiter}' and header=0.")
+                        st.success(f"Successfully loaded with delimiter '{delimiter}' and header=0.")
                         break
             except Exception:
                 pass
@@ -121,17 +122,17 @@ def load_data_robustly(uploaded_file):
                         # Check for a reasonable number of non-empty columns after dropping all-NaN columns
                         if df_attempt_header1.dropna(axis=1, how='all').shape[1] > 5:
                             df = df_attempt_header1
-                            st.success(f" Successfully loaded with delimiter '{delimiter}' and header=1.")
+                            st.success(f"Successfully loaded with delimiter '{delimiter}' and header=1.")
                             break
                 except Exception:
                     pass
 
     if df is None:
-        st.error(" Error: File could not be loaded. Please try another file or check its format/encoding.")
+        st.error("Error: File could not be loaded. Please try another file or check its format/encoding.")
     else:
-        st.write(" Dataset successfully loaded.")
-        st.write(" Shape:", df.shape)
-        st.write(" First 5 rows:")
+        st.write("Dataset successfully loaded.")
+        st.write("Shape:", df.shape)
+        st.write("First 5 rows:")
         st.dataframe(df.head())
         
     return df
@@ -305,7 +306,7 @@ def categorize_variables(ergebnis_df_raw):
             return 'unstable'
         # Rule 7: Noise signal (low percentile range)
         if row['Perzentilspanne'] < 0.05 and row['pct_changes'] > 0.5: # Percentile range very small, but many changes
-            return 'noise_signal'
+            return 'noise signal'
         # Rule 8: Periodic (high change frequency, but not "noisy")
         # Difficult to detect directly from features. Simplified assumption: many changes, but not "noise signal"
         if row['pct_changes'] > 0.2 and row['Perzentilspanne'] >= 0.05: # Many changes, but not too "tight"
@@ -316,7 +317,7 @@ def categorize_variables(ergebnis_df_raw):
         # Default for numeric values that were not specifically classified
         # This fallback applies if it's numeric but didn't fit other rules
         if pd.api.types.is_numeric_dtype(original_df[col_name]):
-            return 'sensor_value'
+            return 'sensor value'
         
         return 'unknown' # Fallback for anything else, though should be caught by 'non-numeric' or 'non-numeric/empty'
 
@@ -374,8 +375,8 @@ def apply_kmeans_clustering(ergebnis_df, optimal_k):
     data_for_clustering = ergebnis_df[current_features].fillna(0) # Fill NaN for clustering
 
     if data_for_clustering.empty or data_for_clustering.shape[0] < optimal_k:
-        st.warning(f"Not enough data points ({data_for_clustering.shape[0]}) for {optimal_k} clusters. Adjusting n_clusters.")
-        optimal_k = max(1, data_for_clustering.shape[0]) # Ensure at least 1 cluster if data exists
+        st.warning(f"Not enough data points ({data_for_clustering.shape[0]}) for {optimal_k} clusters. Setting n_clusters to number of data points.")
+        optimal_k = data_for_clustering.shape[0] if data_for_clustering.shape[0] > 0 else 1
 
     if optimal_k == 0: # Handle case where optimal_k could become 0 if df is empty
         ergebnis_df['Cluster'] = -1
@@ -391,28 +392,38 @@ def apply_kmeans_clustering(ergebnis_df, optimal_k):
 
     return ergebnis_df
 
-def calculate_correlations(ergebnis_df, original_df):
+
+def apply_advanced_naming_and_recommendations(ergebnis_df_raw):
     """
-    Calculates and populates correlation-related features ('Max_Korrelation_Wert',
-    'Korrelationspartner', 'Korrelationswert') in the ergebnis_df.
-    Extracted from apply_advanced_naming_and_recommendations to run earlier.
+    Names clusters and derives recommendations.
+    Directly adapted from the user's script.
     """
+    ergebnis_df = ergebnis_df_raw.copy()
+
     # Initialize columns if not already present
+    if 'Clustername_final' not in ergebnis_df.columns:
+        ergebnis_df['Clustername_final'] = 'unknown'
+    if 'Empfehlung' not in ergebnis_df.columns:
+        ergebnis_df['Empfehlung'] = 'unknown'
     if 'Korrelationspartner' not in ergebnis_df.columns:
         ergebnis_df['Korrelationspartner'] = np.nan
     if 'Korrelationswert' not in ergebnis_df.columns:
         ergebnis_df['Korrelationswert'] = np.nan
-    if 'Max_Korrelation_Wert' not in ergebnis_df.columns:
-        ergebnis_df['Max_Korrelation_Wert'] = 0.0 # Default to 0.0
 
+
+    # Calculate correlations before clustering, as this can influence a variable
     # Only for numeric columns in the original DF
-    numeric_cols_original = original_df.select_dtypes(include=np.number).columns
+    numeric_cols_original = st.session_state['original_df'].select_dtypes(include=np.number).columns
     if 'Time' in numeric_cols_original: # Exclude time if it became numeric somehow
         numeric_cols_original = numeric_cols_original.drop('Time')
 
     if not numeric_cols_original.empty and len(numeric_cols_original) > 1: # Ensure at least 2 numeric columns for correlation
-        corr_matrix = original_df[numeric_cols_original].corr().abs()
+        corr_matrix = st.session_state['original_df'][numeric_cols_original].corr().abs()
         np.fill_diagonal(corr_matrix.values, 0) # Set diagonal to 0 for self-correlation
+
+        # Ensure 'Max_Korrelation_Wert' column exists for features
+        if 'Max_Korrelation_Wert' not in ergebnis_df.columns:
+            ergebnis_df['Max_Korrelation_Wert'] = np.nan
 
         for index, row in ergebnis_df.iterrows():
             var_name = row['Name']
@@ -429,25 +440,15 @@ def calculate_correlations(ergebnis_df, original_df):
                     ergebnis_df.loc[index, 'Korrelationswert'] = np.nan
                     ergebnis_df.loc[index, 'Max_Korrelation_Wert'] = 0.0 # Default to 0 if no strong correlation
     else:
-        # This message will only show if there are no numeric columns at all, which is fine.
-        # st.info("No numeric columns found for correlation calculation or only one numeric column.")
-        pass # Keep silent for now, as it might be expected for some datasets
-    return ergebnis_df
+        st.info("No numeric columns found for correlation calculation or only one numeric column.")
+        # Ensure these columns exist even if no correlation is calculated
+        if 'Max_Korrelation_Wert' not in ergebnis_df.columns:
+            ergebnis_df['Max_Korrelation_Wert'] = 0.0
+        if 'Korrelationspartner' not in ergebnis_df.columns:
+            ergebnis_df['Korrelationspartner'] = np.nan
+        if 'Korrelationswert' not in ergebnis_df.columns:
+            ergebnis_df['Korrelationswert'] = np.nan
 
-
-def apply_advanced_naming_and_recommendations(ergebnis_df_raw, cluster_counts):
-    """
-    Names clusters and derives recommendations.
-    Assumes correlation features are already calculated and present in ergebnis_df.
-    Directly adapted from the user's script.
-    """
-    ergebnis_df = ergebnis_df_raw.copy()
-
-    # Initialize columns if not already present (should be handled by calculate_correlations for correlation-related ones)
-    if 'Clustername_final' not in ergebnis_df.columns:
-        ergebnis_df['Clustername_final'] = 'unknown'
-    if 'Empfehlung' not in ergebnis_df.columns:
-        ergebnis_df['Empfehlung'] = 'unknown'
 
     cluster_names = {}
     # Ensure 'Cluster' column exists before iterating over its unique values
@@ -457,12 +458,12 @@ def apply_advanced_naming_and_recommendations(ergebnis_df_raw, cluster_counts):
 
     for cluster_id in sorted(ergebnis_df['Cluster'].unique()):
         if cluster_id == -1: # Handle unclustered/error case
-            cluster_names[cluster_id] = "Not_Assigned"
+            cluster_names[cluster_id] = "Not Assigned"
             continue
 
         cluster_data = ergebnis_df[ergebnis_df['Cluster'] == cluster_id]
         if cluster_data.empty:
-            cluster_names[cluster_id] = f"Cluster_{cluster_id}:_empty"
+            cluster_names[cluster_id] = f"Cluster {cluster_id}: empty"
             continue
 
         # Calculate average features in the cluster
@@ -489,7 +490,7 @@ def apply_advanced_naming_and_recommendations(ergebnis_df_raw, cluster_counts):
         if avg_features['std'] == 0:
             name_parts.append("constant_value")
         elif avg_features['std'] < 0.1 and avg_features['unique_values'] <= 3:
-            name_parts.append("binary_boolean")
+            name_parts.append("binary/boolean")
         elif avg_features['std'] > 10 and avg_features['pct_changes'] > 0.7:
             name_parts.append("highly_variable")
 
@@ -499,9 +500,9 @@ def apply_advanced_naming_and_recommendations(ergebnis_df_raw, cluster_counts):
 
         # Fusion: If no specific rules apply, use most frequent category or "other"
         if not name_parts:
-            cluster_name = f"Cluster_{cluster_id}:_{top_category if top_category != 'unknown' else 'other'}"
+            cluster_name = f"Cluster {cluster_id}: {top_category if top_category != 'unknown' else 'other'}"
         else:
-            cluster_name = f"Cluster_{cluster_id}:_{', '.join(sorted(set(name_parts)))}"
+            cluster_name = f"Cluster {cluster_id}: {', '.join(sorted(set(name_parts)))}" # Remove duplicates and sort
 
         cluster_names[cluster_id] = cluster_name
 
@@ -511,9 +512,11 @@ def apply_advanced_naming_and_recommendations(ergebnis_df_raw, cluster_counts):
     # Reordered priorities to ensure 'review' takes precedence for problematic variables
     def get_recommendation(row):
         cluster_name = row['Clustername_final']
-        cluster_id_val = row['Cluster']
-        # Use pre-calculated cluster_counts
-        cluster_size = cluster_counts.get(cluster_id_val, 0) # Get count, default to 0 if not found
+        # Ensure 'Cluster' column exists before accessing it
+        cluster_id_val = row['Cluster'] if 'Cluster' in row else -1
+        # Access ergebnis_df from the outer scope for cluster_size calculation
+        # This assumes ergebnis_df is the DataFrame being processed by apply()
+        cluster_size = len(ergebnis_df[ergebnis_df['Cluster'] == cluster_id_val])
         
         # Priority 1 (Highest): Keywords for review (e.g., unstable, outliers)
         if any(keyword in cluster_name.lower() for keyword in ["mode", "outlier", "unstable", "error_prone"]):
@@ -521,27 +524,30 @@ def apply_advanced_naming_and_recommendations(ergebnis_df_raw, cluster_counts):
         
         # Priority 2: Review based on cluster size
         if cluster_size == 1:
-            return "uncertain_review_individually"
+            return "uncertain / review individually"
         if cluster_size == 2:
-            return "review_small_cluster"
+            return "review (small cluster)"
 
         # Priority 3: Keywords for ignoring
-        if any(keyword in cluster_name.lower() for keyword in ["static", "configuration_value", "constant", "non-numeric", "noise_signal"]):
-            return "better_ignore"
+        if any(keyword in cluster_name.lower() for keyword in ["static", "configuration_value", "constant", "non-numeric", "noise signal"]):
+            return "better ignore"
             
         # Priority 4: Specific keywords for high relevance
         if any(keyword in cluster_name.lower() for keyword in ["energiesensor", "digitaletrigger", "dynamic", "variable", "counter"]):
-            return "highly_relevant"
+            return "highly relevant"
         
         # Fallback
-        return "further_review"
+        return "further review"
 
     ergebnis_df['Empfehlung'] = ergebnis_df.apply(get_recommendation, axis=1)
 
     # Post-processing for highly correlated variables
     for index, row in ergebnis_df.iterrows():
         if pd.notna(row['Korrelationspartner']) and row['Korrelationswert'] > 0.95:
-            ergebnis_df.loc[index, 'Empfehlung'] = "highly_relevant_correlated"
+            # If it's already a 'review' type recommendation, don't downgrade it.
+            # Only change to 'highly relevant (correlated)' if it's not already a 'review' or 'highly relevant'
+            if row['Empfehlung'] not in ["highly relevant", "review", "uncertain / review individually", "review (small cluster)"]:
+                ergebnis_df.loc[index, 'Empfehlung'] = "highly relevant (correlated)"
 
     return ergebnis_df
 
@@ -562,7 +568,7 @@ def create_correlation_heatmap(df):
     corr_matrix = numeric_df.corr()
 
     fig, ax = plt.subplots(figsize=(10, 8))
-    sns.heatmap(corr_matrix, annot=False, cmap='coolwarm', fmt=".2f", ax=ax) # Removed annot=True
+    sns.heatmap(corr_matrix, annot=False, cmap='coolwarm', fmt=".2f", ax=ax)
     ax.set_title("Correlation Heatmap of Numeric Variables")
     st.pyplot(fig)
 
@@ -572,36 +578,35 @@ def create_batch_diagrams(df_original):
     Creates batch diagrams for numeric variables (Fireplot).
     Directly adapted from the user's script (Matplotlib).
     """
-    st.subheader(" Batch Diagrams: Time Series of Numeric Variables")
+    st.subheader("Batch Diagrams: Time Series of Numeric Variables")
 
-    zeit_spalte = None
+    time_column = None
     for col in df_original.columns:
         if col.strip().lower() == 'time':
-            zeit_spalte = col
+            time_column = col
             break
 
-    if zeit_spalte is None:
-        st.error(" Time column (e.g., 'time') not found.")
+    if time_column is None:
+        st.error("Time column (e.g., 'time') not found.")
         return
 
     try:
-        df_original[zeit_spalte] = pd.to_datetime(df_original[zeit_spalte], errors='coerce')
-        df_original = df_original.dropna(subset=[zeit_spalte])
-        df_original = df_original.sort_values(by=zeit_spalte)
+        df_original[time_column] = pd.to_datetime(df_original[time_column], errors='coerce')
+        df_original = df_original.dropna(subset=[time_column])
+        df_original = df_original.sort_values(by=time_column)
     except Exception as e:
-        st.error(f" Error converting time column: {e}")
+        st.error(f"Error converting time column: {e}")
         return
 
     numeric_columns = df_original.select_dtypes(include='number').columns.tolist()
-    # Fix: Corrected list comprehension for numeric_columns to remove the duplicate 'col for col'
-    numeric_columns = [col for col in numeric_columns if col != zeit_spalte]
+    numeric_columns = [col for col in numeric_columns if col != time_column]
 
     if not numeric_columns:
         st.info("No numeric columns found to create batch diagrams.")
         return
 
     # Optional: Only a sample (e.g., 100000 rows) to save resources
-    sample_df = df_original[[zeit_spalte] + numeric_columns].copy()
+    sample_df = df_original[[time_column] + numeric_columns].copy()
     sample_df = sample_df.head(100000)
 
     cols_per_fig = 5 # Adjusted for Streamlit display
@@ -620,7 +625,7 @@ def create_batch_diagrams(df_original):
 
         for j, var in enumerate(sub_vars):
             ax = axes[j]
-            ax.plot(sample_df[zeit_spalte], sample_df[var], linewidth=0.5)
+            ax.plot(sample_df[time_column], sample_df[var], linewidth=0.5)
             ax.set_title(var, fontsize=9)
             ax.tick_params(axis='x', labelrotation=45, labelsize=7)
             ax.tick_params(axis='y', labelsize=7)
@@ -628,14 +633,14 @@ def create_batch_diagrams(df_original):
         for k in range(len(sub_vars), len(axes)):
             axes[k].axis('off')
 
-        plt.suptitle(" Time Series of Numeric Variables", fontsize=16)
+        plt.suptitle("Time Series of Numeric Variables", fontsize=16)
         plt.tight_layout(rect=[0, 0, 1, 0.96])
         st.pyplot(fig)
         plt.close(fig) # Close figure to free memory
 
 
 # --- Streamlit App Structure ---
-st.title("Variable Analysis and Classification")
+st.title("Variable Analysis and Classification (Final Version)")
 st.markdown("This application helps you classify variables in your dataset and provide recommendations based on their statistical characteristics and clustering.")
 st.markdown("---")
 
@@ -653,9 +658,9 @@ if uploaded_file is not None:
     st.info("File uploaded. Processing...")
     st.session_state['original_df'] = load_data_robustly(uploaded_file)
     if st.session_state['original_df'] is not None:
-        st.success(" Data successfully loaded into session.")
+        st.success("✅ Data successfully loaded into session.")
     else:
-        st.error(" Data could not be loaded. Please check the file.")
+        st.error("❌ Data could not be loaded. Please check the file.")
 else:
     st.info("Please upload a file to begin.")
 
@@ -694,7 +699,7 @@ if st.session_state['original_df'] is not None:
                 ]
                 
                 for col in non_numeric_cols:
-                    row_data = {'Name': col, 'Kategorie': 'non-numeric'}
+                    row_data = {'Name': col, 'Kategorie': 'non-numeric'} 
                     row_data['count'] = df_cleaned[col].count()
                     row_data['unique_values'] = df_cleaned[col].nunique()
                     row_data['pct_nans'] = df_cleaned[col].isnull().sum() / len(df_cleaned[col]) if len(df_cleaned[col]) > 0 else np.nan
@@ -716,42 +721,33 @@ if st.session_state['original_df'] is not None:
             else:
                 ergebnis_df = pd.DataFrame() # Empty DataFrame if no columns processed
 
-            # Initialize 'Cluster' column for all variables BEFORE any filtering or clustering
-            # This ensures the column always exists, preventing KeyError later.
-            if 'Cluster' not in ergebnis_df.columns:
-                ergebnis_df['Cluster'] = -1 # Default to -1 for unclustered
-
             # Step 2.3: Categorize variables (applies to both numeric and non-numeric)
             if not ergebnis_df.empty:
                 ergebnis_df = categorize_variables(ergebnis_df)
             else:
                 st.warning("No data for categorization.")
                 st.session_state['ergebnis_df'] = pd.DataFrame(columns=['Name', 'Kategorie', 'Cluster', 'Clustername_final', 'Empfehlung', 'Korrelationspartner', 'Korrelationswert'])
-                st.success("Analysis and classification completed, but no variables processed.")
+                st.success("✅ Analysis and classification completed, but no variables processed.")
                 # No return here, allow the rest of the script to run with empty/default data
 
-            # Initialize Clustername_final before correlation/clustering
+            # Initialize Cluster column before clustering logic to prevent KeyError
+            # This block was moved here to ensure 'Cluster' and 'Clustername_final' are always present
+            if 'Cluster' not in ergebnis_df.columns:
+                ergebnis_df['Cluster'] = -1 # Default to -1 for unclustered
             if 'Clustername_final' not in ergebnis_df.columns:
-                ergebnis_df['Clustername_final'] = 'Not_Applicable' # Default name
+                ergebnis_df['Clustername_final'] = 'Not Applicable' # Default name
+            # Also initialize 'Max_Korrelation_Wert' here if it's not present for clustering
+            if 'Max_Korrelation_Wert' not in ergebnis_df.columns:
+                ergebnis_df['Max_Korrelation_Wert'] = 0.0
 
-            # NEW: Step 2.4: Calculate correlations BEFORE clustering
-            # Pass original_df to calculate_correlations
-            ergebnis_df = calculate_correlations(ergebnis_df, st.session_state['original_df'])
 
-            # Step 2.5: Clustering (only if there are numeric features and enough data points)
+            # Step 2.4: Clustering (only if there are numeric features and enough data points)
             # Filter for variables that are candidates for clustering (i.e., not 'non-numeric' or 'non-numeric/empty')
             clustering_candidates = ergebnis_df[
                 (ergebnis_df['Kategorie'] != 'non-numeric') &
                 (ergebnis_df['Kategorie'] != 'non-numeric/empty') &
                 (ergebnis_df['count'] > 0) # Only cluster non-empty numeric data
             ].copy()
-
-            st.write("--- Debugging Clustering Candidates ---")
-            st.write(f"Shape of ergebnis_df before filtering for clustering: {ergebnis_df.shape}")
-            st.dataframe(ergebnis_df.head())
-            st.write(f"Shape of clustering_candidates: {clustering_candidates.shape}")
-            st.dataframe(clustering_candidates.head())
-            st.write("--- End Debugging Clustering Candidates ---")
 
             if not clustering_candidates.empty and clustering_candidates.shape[0] > 1:
                 # Prepare data for clustering, ensure all relevant columns are numeric and not NaN
@@ -766,38 +762,23 @@ if st.session_state['original_df'] is not None:
 
                 if not clustering_data_subset.empty and clustering_data_subset.shape[0] > 1:
                     optimal_k = find_optimal_clusters_kmeans(clustering_data_subset)
-                    # Handle case where optimal_k might be 0 or 1, and adjust if it exceeds data points
-                    if optimal_k > clustering_data_subset.shape[0]:
-                        optimal_k = max(1, clustering_data_subset.shape[0])
-                    
                     st.info(f"Optimal number of clusters found: {optimal_k}")
                     
-                    # Apply clustering to the candidates
                     ergebnis_df_clustered_part = apply_kmeans_clustering(clustering_candidates, optimal_k)
                     
                     # Update 'Cluster' column in main ergebnis_df based on 'Name'
-                    # Use .loc for direct assignment to ensure it updates correctly
-                    # Align by 'Name' column (which is the index after set_index)
                     ergebnis_df = ergebnis_df.set_index('Name')
-                    # Ensure ergebnis_df_clustered_part also has 'Name' as index for proper alignment
-                    ergebnis_df.loc[ergebnis_df_clustered_part['Name'], 'Cluster'] = ergebnis_df_clustered_part.set_index('Name')['Cluster']
+                    ergebnis_df.update(ergebnis_df_clustered_part.set_index('Name')[['Cluster']]) # Only update 'Cluster' column
                     ergebnis_df = ergebnis_df.reset_index()
-
                 else:
-                    st.warning("Not enough valid numeric variables for clustering after subsetting. Clustering skipped. Check if all features for clustering are valid.")
-                    # 'Cluster' column is already initialized to -1 for all rows
+                    st.warning("Not enough valid numeric variables for clustering. Clustering skipped.")
             else:
-                st.warning("Not enough numeric variables (or only one) qualified for clustering based on current filters ('non-numeric', 'non-numeric/empty', 'count > 0'). All variables will remain in Cluster -1.")
-                # 'Cluster' column is already initialized to -1 for all rows
+                st.warning("Not enough numeric variables for clustering. Clustering skipped.")
 
-            # Get cluster counts for recommendations (after clustering is attempted)
-            # This will now safely access 'Cluster' column because it's always initialized
-            cluster_counts_dict = ergebnis_df['Cluster'].value_counts().to_dict()
+            # Step 2.5: Advanced Naming and Recommendations
+            st.session_state['ergebnis_df'] = apply_advanced_naming_and_recommendations(ergebnis_df)
 
-            # Step 2.6: Advanced Naming and Recommendations (now uses pre-calculated correlations and cluster counts)
-            st.session_state['ergebnis_df'] = apply_advanced_naming_and_recommendations(ergebnis_df, cluster_counts_dict)
-
-        st.success(" Analysis and classification completed.")
+        st.success("✅ Analysis and classification completed.")
         st.subheader("Classification Results Table:")
         st.dataframe(st.session_state['ergebnis_df'])
 else:
@@ -812,12 +793,12 @@ if st.session_state.get('ergebnis_df') is not None and not st.session_state['erg
     st.subheader("1. Variable Distribution by Category")
     try:
         category_counts = st.session_state['ergebnis_df']['Kategorie'].value_counts().reset_index()
-        category_counts.columns = ['Kategorie', 'Count'] # Renamed for English display
+        category_counts.columns = ['Category', 'Count'] 
         
-        fig_category = px.bar(category_counts, x='Kategorie', y='Count',
+        fig_category = px.bar(category_counts, x='Category', y='Count',
                               title='Distribution of Variables by Category',
-                              labels={'Kategorie': 'Category', 'Count': 'Number of Variables'},
-                              color='Kategorie',
+                              labels={'Category': 'Category', 'Count': 'Number of Variables'},
+                              color='Category',
                               color_discrete_sequence=px.colors.qualitative.Pastel)
         st.plotly_chart(fig_category, use_container_width=True)
     except Exception as e:
@@ -831,20 +812,20 @@ if st.session_state.get('ergebnis_df') is not None and not st.session_state['erg
             # Ensure necessary columns for Sunburst exist
             sunburst_df = st.session_state['ergebnis_df'].copy()
             # Rename columns for the English path in the Sunburst chart
-            sunburst_df = sunburst_df.rename(columns={'Kategorie': 'Category', 'Clustername_final': 'Cluster_Name', 'Empfehlung': 'Recommendation'})
-            for col in ['Category', 'Cluster_Name', 'Recommendation', 'Name']:
+            sunburst_df = sunburst_df.rename(columns={'Kategorie': 'Category', 'Clustername_final': 'Clustername', 'Empfehlung': 'Recommendation'})
+            for col in ['Category', 'Clustername', 'Recommendation', 'Name']:
                 if col not in sunburst_df.columns:
                     sunburst_df[col] = 'N/A' # Placeholder if column is missing
 
             fig_sunburst = px.sunburst(sunburst_df,
-                                       path=['Category', 'Cluster_Name', 'Recommendation', 'Name'],
+                                       path=['Category', 'Clustername', 'Recommendation', 'Name'],
                                        title='Hierarchical Grouping of Variables',
-                                       color='Category', # Color the outermost ring by Category
-                                       color_discrete_sequence=px.colors.qualitative.Pastel # Use a qualitative color scheme
+                                       color='Category', 
+                                       color_discrete_sequence=px.colors.qualitative.Pastel 
                                       )
-            fig_sunburst.update_layout(margin=dict(t=50, l=0, r=0, b=0), # Adjust margins
-                                       hoverlabel=dict(bgcolor="white", font_size=12, font_family="Arial"), # Custom hover text styling
-                                       height=700 # Adjust height as needed
+            fig_sunburst.update_layout(margin=dict(t=50, l=0, r=0, b=0), 
+                                       hoverlabel=dict(bgcolor="white", font_size=12, font_family="Arial"), 
+                                       height=700 
                                       )
             st.plotly_chart(fig_sunburst, use_container_width=True)
         except Exception as e:
@@ -856,7 +837,7 @@ if st.session_state.get('ergebnis_df') is not None and not st.session_state['erg
         try:
             if 'Empfehlung' in st.session_state['ergebnis_df'].columns:
                 empfehlung_counts = st.session_state['ergebnis_df']["Empfehlung"].value_counts().reset_index()
-                empfehlung_counts.columns = ['Recommendation', 'Count'] # Rename columns for Plotly Express
+                empfehlung_counts.columns = ['Recommendation', 'Count'] 
                 
                 # Sort by 'Recommendation' to ensure consistent order
                 empfehlung_counts = empfehlung_counts.sort_values(by='Recommendation')
@@ -865,17 +846,14 @@ if st.session_state.get('ergebnis_df') is not None and not st.session_state['erg
                                  values='Count', 
                                  names='Recommendation', 
                                  title='Distribution of Recommendations',
-                                 color_discrete_sequence=px.colors.qualitative.Pastel # Use a qualitative color scheme
+                                 color_discrete_sequence=px.colors.qualitative.Pastel 
                                 )
-                fig_pie.update_traces(textposition='outside', # Move text outside
-                                      textinfo='percent', # Show only percentage inside
-                                      marker=dict(line=dict(color='#000000', width=1)),
-                                      hovertemplate='<b>%{label}</b><br>Count: %{value}<br>Percentage: %{percent:.1%}<extra></extra>' # Improved hover text
-                                     ) 
+                fig_pie.update_traces(textposition='inside', textinfo='percent+label',
+                                      marker=dict(line=dict(color='#000000', width=1))) 
                 fig_pie.update_layout(height=400,
-                                      title_font_size=16, # Increase title font size
-                                      legend_font_size=12, # Increase legend font size
-                                      )
+                                      title_font_size=16, 
+                                      legend_font_size=12, 
+                                      uniformtext_minsize=10, uniformtext_mode='hide') 
                 st.plotly_chart(fig_pie, use_container_width=True)
             else:
                 st.info("Recommendation column not found for chart generation.")
@@ -927,36 +905,35 @@ st.markdown("---")
 # --- Step 5: Generate Data Report ---
 st.header("Step 5: Generate Data Report")
 if st.session_state.get('original_df') is not None and not st.session_state['original_df'].empty:
-    st.write("Generate a comprehensive data profile report for the uploaded data.")
-    if st.button("Generate Data Profile Report"):
-        with st.spinner("Generating report... This may take a few minutes for large datasets."):
-            try:
-                # Generate the EDA report using the original_df
-                profile = ProfileReport(st.session_state['original_df'], title="Data Profile Report", explorative=True)
-                
-                # Save the report to a temporary file and then offer it for download
-                report_path = "data_profile_report.html"
-                profile.to_file(report_path)
+    st.write("Due to library incompatibility with Streamlit Cloud's Python version (Python 3.13), "
+             "comprehensive data profiling libraries like `ydata-profiling` and `sweetviz` are currently not supported. "
+             "Below is a basic in-app data overview.")
+    
+    st.subheader("Basic Data Overview")
+    
+    st.write("### Dataset Information (df.info())")
+    # Redirect info() output to a string buffer to display in Streamlit
+    buffer = io.StringIO()
+    st.session_state['original_df'].info(buf=buffer)
+    st.text(buffer.getvalue())
 
-                with open(report_path, "rb") as f:
-                    st.download_button(
-                        label="Download Data Profile Report (HTML)",
-                        data=f,
-                        file_name="data_profile_report.html",
-                        mime="text/html"
-                    )
-                st.success(" Data profile report generated successfully!")
-            except Exception as e:
-                st.error(f" Error generating data profile report: {e}")
+    st.write("### Descriptive Statistics (df.describe())")
+    st.dataframe(st.session_state['original_df'].describe())
+
+    st.write("### Missing Values")
+    st.dataframe(st.session_state['original_df'].isnull().sum().rename('Missing Count'))
+
+    st.write("### Unique Values for Non-Numeric Columns (Top 10)")
+    non_numeric_cols_for_report = st.session_state['original_df'].select_dtypes(exclude=np.number).columns
+    if not non_numeric_cols_for_report.empty:
+        for col in non_numeric_cols_for_report:
+            st.write(f"#### Column: `{col}`")
+            st.dataframe(st.session_state['original_df'][col].value_counts().head(10))
+    else:
+        st.info("No non-numeric columns found for unique value analysis.")
+
 else:
     st.info("Please upload data in Step 1 first to generate a data profile report.")
 
 st.markdown("---")
 st.info("Thank you for using the Variable Classification App!")
-# Additional output for checking cluster distribution
-# ergebnis_df should be available here if analysis was performed
-
-
-st.write(f"Pandas Version: {pd.__version__}")
-st.write(f"Scikit-learn Version: {sklearn.__version__}")
-st.write(f"Numpy Version: {np.__version__}")
