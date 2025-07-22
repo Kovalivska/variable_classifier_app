@@ -60,7 +60,8 @@ The logic for classifying and clustering variables is based on a **hybrid approa
 
 ### Diagram:
 
-<img width="3840" height="2986" alt="image" src="https://github.com/user-attachments/assets/2735f970-396e-4ec3-9380-d8df86c48a1d" />
+<img width="3840" height="2955" alt="image" src="https://github.com/user-attachments/assets/40a61efa-677e-4de8-bfe0-d4c9e0a152bd" />
+
 
 ---
 
