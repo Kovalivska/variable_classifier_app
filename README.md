@@ -3,6 +3,8 @@
 
 This repository contains a **Streamlit application** for classifying variables based on their properties, generating reports, and visualizations.
 
+https://variableclassifierapp-gw2uifdpryaqzgh4pw8ger.streamlit.app/ 
+
 ## Features
 
 - **Robust Data Loading**: Supports loading CSV and Excel files with automatic delimiter and header detection.
