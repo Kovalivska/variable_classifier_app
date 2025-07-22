@@ -22,7 +22,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 # --- Configuration (MUST be the first Streamlit command) ---
-st.set_page_config(layout="wide", page_title="Variable Classification App (Final Version)")
+st.set_page_config(layout="wide", page_title="Variable Classification App")
 
 # --- Library Installation and Version Check for Colab Synchronization ---
 # These commands will attempt to install/update the specified libraries.
